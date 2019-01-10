@@ -1,0 +1,273 @@
+---
+title: "Use decision trees to classify expert and novice of beerpang"
+author: "Guanren Wang"
+date: "2018-12-8"
+output: word_document
+---
+#import data
+```{r}
+alex<-read.csv('D:/data mining/assignment8/alex.csv')
+dave<-read.csv('D:/data mining/assignment8/dave.csv')
+ella<-read.csv('D:/data mining/assignment8/ella.csv')
+grandeur<-read.csv('D:/data mining/assignment8/grandeur.csv')
+katerina<-read.csv('D:/data mining/assignment8/katerina.csv')
+oren<-read.csv('D:/data mining/assignment8/oren.csv')
+shuangmu<-read.csv('D:/data mining/assignment8/shuangmu.csv')
+stephanie<-read.csv('D:/data mining/assignment8/stephanie.csv')
+```
+#visualization
+```{r}
+#label the data with names
+name<-list(alex,dave,ella,grandeur,katerina,oren,shuangmu,stephanie)
+n<-c('alex','dave','ella','grandeur','katerina','oren','shuangmu','stephanie')
+for (i in 1:8) {
+  name[[i]]$names<-c(rep(n[i],nrow(name[[i]])))
+}
+
+#add a classification colunm of skill(expert or novice) and bind data into one dataset
+alldata<-data.frame()
+for (i in 1:8) alldata<-rbind.data.frame(alldata,name[[i]])
+library(dplyr)
+alldata<-mutate(alldata,skill='novice')
+alldata$skill[which(alldata$names%in%c('oren','ella',"dave",'shuangmu'))]<-'expert'
+alldata$skill<-as.factor(alldata$skill)
+alldata$names<-as.factor(alldata$names)
+names(alldata)<-c('time','x','y','z','names','skill')
+
+
+#I made two series of plots to visualize the data because Stephanie's throwing time is kind of long which makes me hard to catch the feature.
+#visualization includes stephanie
+library(ggplot2)
+ggplot(data=alldata)+geom_line(aes(x=time,y=x,group=names,color=skill))+labs(title = 'x vs time(all)')+theme_bw(base_size = 14)
+ggplot(data=alldata)+geom_line(aes(x=time,y=y,group=names,color=skill))+labs(title = 'y vs time(all)')+theme_bw(base_size = 14)
+ggplot(data=alldata)+geom_line(aes(x=time,y=z,group=names,color=skill))+labs(title = 'z vs time(all)')+theme_bw(base_size = 14)
+#visualization excludes stephanie
+alldata1<-filter(alldata,names!='stephanie')
+ggplot(data=alldata1)+geom_line(aes(x=time,y=x,group=names,color=skill))+labs(title = 'x vs time(exclude stephanie)')+theme_bw(base_size = 14)
+ggplot(data=alldata1)+geom_line(aes(x=time,y=y,group=names,color=skill))+labs(title = 'y vs time(exclude stephanie)')+theme_bw(base_size = 14)
+ggplot(data=alldata1)+geom_line(aes(x=time,y=z,group=names,color=skill))+labs(title = 'z vs time(exclude stephanie)')+theme_bw(base_size = 14)
+#accroding to the plots, we could find that y is the best variable to measure  times of throwing
+```
+#pick peak for each throw
+```{r}
+d<-filter(alldata,y>7)
+#ggplot(data=alex.p)+geom_line(aes(x=time,y=z,group=names,color=skill))+labs(title = 'z vs time(exclude stephanie)')+theme_bw(base_size = 14)
+#ggplot(data=alex.p)+geom_line(aes(x=time,y=x,group=names,color=skill))+labs(title = 'x vs time(exclude stephanie)')+theme_bw(base_size = 14)
+#ggplot(data=alex.p)+geom_line(aes(x=time,y=y,group=names,color=skill))+labs(title = 'y vs time(exclude stephanie)')+theme_bw(base_size = 14)
+
+#pick peaks of alex
+alex.p<-filter(d,names=='alex')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(alex.p)-1)) {
+  if ((alex.p$time[i+1]-alex.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(alex.p$y[l[i]:(l[i+1]-1)]))
+}
+alex.max<-filter(alldata,alldata$y%in%m)
+
+#pick peaks of dave
+dave.p<-filter(d,names=='dave')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(dave.p)-1)) {
+  if ((dave.p$time[i+1]-dave.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(dave.p$y[l[i]:(l[i+1]-1)]))
+}
+dave.max<-filter(alldata,alldata$y%in%m)
+
+#pick peaks of ella
+ella.p<-filter(d,names=='ella')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(ella.p)-1)) {
+  if ((ella.p$time[i+1]-ella.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(ella.p$y[l[i]:(l[i+1]-1)]))
+}
+ella.max<-filter(alldata,alldata$y%in%m)
+
+#pick peaks of grandeur
+grandeur.p<-filter(alldata,names=='grandeur'&y>5)
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(grandeur.p)-1)) {
+  if ((grandeur.p$time[i+1]-grandeur.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(grandeur.p$y[l[i]:(l[i+1]-1)]))
+}
+grandeur.max<-filter(alldata,alldata$y%in%m)
+#there are only 13 values in grandeur.max, let's visualize it to check
+####names(grandeur)<-c('time','x','y','z')
+####ggplot(data=grandeur)+geom_line(aes(x=time,y=z))+labs(title = 'grandeur z vs time(exclude stephanie)')+theme_bw(base_size = 14)
+####ggplot(data=grandeur)+geom_line(aes(x=time,y=x))+labs(title = 'grandeur x vs time(exclude stephanie)')+theme_bw(base_size = 14)
+####ggplot(data=grandeur)+geom_line(aes(x=time,y=y))+labs(title = 'grandeur y vs time(exclude stephanie)')+theme_bw(base_size = 14)
+
+#pick peaks of katerina
+katerina.p<-filter(d,names=='katerina')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(katerina.p)-1)) {
+  if ((katerina.p$time[i+1]-katerina.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(katerina.p$y[l[i]:(l[i+1]-1)]))
+}
+katerina.max<-filter(alldata,alldata$y%in%m)
+
+#pick peaks of oren
+oren.p<-filter(d,names=='oren')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(oren.p)-1)) {
+  if ((oren.p$time[i+1]-oren.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(oren.p$y[l[i]:(l[i+1]-1)]))
+}
+oren.max<-filter(alldata,alldata$y%in%m)
+
+#pick peaks of shuangmu
+shuangmu.p<-filter(d,names=='shuangmu')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(shuangmu.p)-1)) {
+  if ((shuangmu.p$time[i+1]-shuangmu.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(shuangmu.p$y[l[i]:(l[i+1]-1)]))
+}
+shuangmu.max<-filter(alldata,alldata$y%in%m)
+
+#pick peaks of stephanie
+stephanie.p<-filter(d,names=='stephanie')
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(stephanie.p)-1)) {
+  if ((stephanie.p$time[i+1]-stephanie.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(stephanie.p$y[l[i]:(l[i+1]-1)]))
+}
+stephanie.max<-filter(alldata,alldata$y%in%m)
+
+#Here I fine-tuned the threshold for several times and chose the best one.
+library(tidyr)
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(d)-1)) {
+  if ((d$time[i+1]-d$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(d$y[l[i]:(l[i+1]-1)]))
+}
+max<-filter(alldata,alldata$y%in%m)
+```
+# use decision tree to classify
+```{r}
+library(rpart)
+library(rpart.plot)
+
+tree<-rpart(data = max,skill~x+y+z,method = 'class')
+printcp(tree)
+rpart.plot(tree,type=2,extra = 104,fallen.leaves = TRUE, main="Unpruned Tree")
+#prune decision trees
+tree.pruned<-prune.rpart(tree,cp=0.013158)
+rpart.plot(tree.pruned,type=2,extra = 104,fallen.leaves = TRUE, main="Pruned Tree")
+max$class.pruned<-predict(tree.pruned,type='class')
+max$class<-predict(tree,type='class')
+```
+#model evaluation
+```{r}
+#use mean to predict
+mean<-max%>%group_by(names)%>%summarise(x.mean=mean(x),y.mean=mean(y),z.mean=mean(z))
+mean$skill<-as.factor(c('novice','expert','expert','novice'))
+mean$class.pruned<-predict(tree.pruned,type='class',newdata =data.frame(x=mean$x.mean,y=mean$y.mean,z=mean$z.mean))
+mean$class<-predict(tree,type='class',newdata =data.frame(x=mean$x.mean,y=mean$y.mean,z=mean$z.mean))
+select(mean,names,5:7)#mean based prediction,I personally recommend this way to predict
+
+#calculate accuracy, precision and recall
+table<-table(max$class,max$skill)
+table.pruned<-table(max$class.pruned,max$skill)
+accuracy<-sum(diag(table))/nrow(max)
+precision<-table[1,1]/sum(table[,1])
+recall<-table[1,1]/sum(table[1,])
+accuracy.pruned<-sum(diag(table.pruned))/nrow(max)
+precision.pruned<-table.pruned[1,1]/sum(table.pruned[,1])
+recall.pruned<-table.pruned[1,1]/sum(table.pruned[1,])
+comparison<-data.frame(unpruned=c(accuracy,precision,recall),pruned=c(accuracy.pruned,precision.pruned,recall.pruned),row.names = c('accuracy','precision','recall'))
+comparison
+
+#ROC Curve
+library(plotROC)
+ggplot(max, aes(d =(as.numeric(skill)-1), m =(as.numeric(class))-1)) + geom_roc(color='red')+theme_bw()+labs(title = 'ROC Curve') +geom_abline(intercept = 0,slope = 1,linetype=2)
+ggplot(max, aes(d =(as.numeric(skill)-1), m =(as.numeric(class.pruned))-1)) + geom_roc(color='red')+theme_bw()+labs(title = 'ROC Curve(pruned)') +geom_abline(intercept = 0,slope = 1,linetype=2)
+
+#Calculate kappa
+library(psych)
+#cohen's kappa is:
+cohen.kappa(table)$kappa#unpruned
+cohen.kappa(table.pruned)$kappa#pruned
+
+#we could conclude that pruned model is better
+```
+#post intervention
+```{r}
+#import data
+alex.p<-read.csv('D:/data mining/assignment8/palex.csv')
+grandeur.p<-read.csv('D:/data mining/assignment8/grandeur.csv')
+katerina.p<-read.csv('D:/data mining/assignment8/katerina.csv')
+stephanie.p<-read.csv('D:/data mining/assignment8/stephanie.csv')
+#label the data with names
+name.p<-list(alex,grandeur,katerina,stephanie)
+n<-c('alex','grandeur','katerina','stephanie')
+for (i in 1:4) {
+  name.p[[i]]$names<-c(rep(n[i],nrow(name.p[[i]])))
+}
+alldata.p<-data.frame()
+for (i in 1:4) alldata.p<-rbind.data.frame(alldata.p,name.p[[i]])
+library(dplyr)
+alldata.p<-mutate(alldata.p,skill='novice')
+alldata.p$skill[which(alldata.p$names%in%c('grandeur','katerina'))]<-'expert'
+alldata.p$skill<-as.factor(alldata.p$skill)
+alldata.p$names<-as.factor(alldata.p$names)
+names(alldata.p)<-c('time','x','y','z','names','skill')
+
+#visualization including stephanie 
+library(ggplot2)
+ggplot(data=alldata.p)+geom_line(aes(x=time,y=x,group=names,color=skill))+labs(title = 'x vs time(all)')+theme_bw(base_size = 14)
+ggplot(data=alldata.p)+geom_line(aes(x=time,y=y,group=names,color=skill))+labs(title = 'y vs time(all)')+theme_bw(base_size = 14)
+ggplot(data=alldata.p)+geom_line(aes(x=time,y=z,group=names,color=skill))+labs(title = 'z vs time(all)')+theme_bw(base_size = 14)
+#visualization excludes stephanie
+alldata1.p<-filter(alldata.p,names!='stephanie')
+ggplot(data=alldata1.p)+geom_line(aes(x=time,y=x,group=names,color=skill))+labs(title = 'x vs time(exclude stephanie)')+theme_bw(base_size = 14)
+ggplot(data=alldata1.p)+geom_line(aes(x=time,y=y,group=names,color=skill))+labs(title = 'y vs time(exclude stephanie)')+theme_bw(base_size = 14)
+ggplot(data=alldata1.p)+geom_line(aes(x=time,y=z,group=names,color=skill))+labs(title = 'z vs time(exclude stephanie)')+theme_bw(base_size = 14)
+#accroding to the plots, we could find that y is the best variable to measure  times of throwing
+
+#select peaks
+d.p<-filter(alldata,y>6)
+l<-c(1)
+m<-c()
+for (i in 1:(nrow(d.p)-1)) {
+  if ((d.p$time[i+1]-d.p$time[i])>0.1) l<-rbind(l,i+1)
+  }
+for (i in 1:(nrow(l)-1)) {
+  m<-rbind(m,max(d.p$y[l[i]:(l[i+1]-1)]))
+}
+max.p<-filter(alldata.p,alldata.p$y%in%m)
+
+#use tree to predict
+#calculate the average to predict
+mean.p<-max.p%>%group_by(names)%>%summarise(x.mean=mean(x),y.mean=mean(y),z.mean=mean(z))
+mean.p$skill<-as.factor(c('novice','expert','expert','novice'))
+mean.p$class.pruned<-predict(tree.pruned,type='class',newdata =data.frame(x=mean.p$x.mean,y=mean.p$y.mean,z=mean.p$z.mean))
+mean.p$class<-predict(tree,type='class',newdata =data.frame(x=mean.p$x.mean,y=mean.p$y.mean,z=mean.p$z.mean))
+select(mean.p,names,5:7)#mean based prediction
+#It seems that newly measured data is not applicable of this model
+```
